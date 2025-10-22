@@ -32,8 +32,8 @@ Follow these steps to get the project up and running on your local machine.
 1.  **Clone the repository:**
 
     ```bash
-    git clone https://github.com/YOUR_USERNAME/YOUR_REPOSITORY_NAME.git
-    cd YOUR_REPOSITORY_NAME
+    git clone https://github.com/AliGohar2151/ai-git-commit-assistant
+    cd ai-git-commit-assistant
     ```
 
 2.  **Create a virtual environment (recommended):**
@@ -49,14 +49,11 @@ Follow these steps to get the project up and running on your local machine.
     pip install -r requirements.txt
     ```
 
-    _(You'll need to create a `requirements.txt` file first: `pip freeze > requirements.txt`)_
-
 4.  **Set up your Groq API Key:**
     Create a file named `.env` in the root of your project and add your Groq API key:
     ```
     MY_API_KEY="YOUR_GROQ_API_KEY_HERE"
     ```
-    _Note: Ensure your `.gitignore` file includes `.env` to prevent committing your API key._
 
 ## 🏃 How to Run
 
@@ -78,10 +75,6 @@ Follow these steps to get the project up and running on your local machine.
 
 Feel free to fork the repository, open issues, or submit pull requests.
 
-## 📄 License
-
-This project is open-source and available under the MIT License. _(You might want to add a LICENSE file)_
-
 ## 👤 Author
 
-- **Ali Gohar** - GitHub Profile
+- **Ali Gohar** - [GitHub Profile](https://github.com/AliGohar2151)
