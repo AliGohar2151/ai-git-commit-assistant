@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+*.pyd
+*.pyo
+
+# Virtual environment
+venv/
+.venv/
+
+# Environment variables (e.g., for API keys)
+.env
+
+# Streamlit specific
+.streamlit/
+
+# Logs and temporary files
+*.log
+*.tmp
