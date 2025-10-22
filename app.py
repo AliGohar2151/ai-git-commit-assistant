@@ -26,7 +26,9 @@ if "diff" not in st.session_state:
 
 # --- INPUT ---
 repo_path = st.text_input(
-    "📁 Repository Path", value=r"D:\Data-Engineering\ga4-data-processing"
+    "📁 Repository Path",
+    value=".",  # Default to the current directory
+    help="Defaults to the current directory. Change if you want to analyze another local repository.",
 )
 generate_btn = st.button("🔍 Detect Changes & Generate Commit Message")
 
