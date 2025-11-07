@@ -139,11 +139,21 @@ Git diff:
 def commit_changes(repo_path: str, message: str) -> Tuple[bool, str]:
     """Stage and commit all changes safely. Returns (success, message)."""
     try:
-        subprocess.run(["git", "add", "."], cwd=repo_path, check=True)
-        subprocess.run(["git", "commit", "-m", message], cwd=repo_path, check=True)
+        subprocess.run(
+            ["git", "add", "."], cwd=repo_path, check=True, capture_output=True
+        )
+        # Use --file=- to pass the multi-line message via stdin
+        subprocess.run(
+            ["git", "commit", "--file=-"],
+            input=message,
+            text=True,
+            cwd=repo_path,
+            check=True,
+            capture_output=True,
+        )
         return True, "✅ Commit created successfully!"
     except subprocess.CalledProcessError as e:
-        return False, f"❌ Commit failed: {e.stderr or e}"
+        return False, f"❌ Commit failed: {e.stderr.strip() or e}"
 
 
 # --- MAIN LOGIC ---
