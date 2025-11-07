@@ -184,7 +184,7 @@ if st.session_state.commit_message:
         height=160,
     )
 
-    col1, col2, col3 = st.columns([1, 1, 2])
+    col1, col2, = st.columns([1, 2])
 
     with col1:
         if st.button("💾 Commit Changes"):
@@ -199,15 +199,33 @@ if st.session_state.commit_message:
             else:
                 st.error(msg)
 
-    with col2:
-        # Streamlit cannot directly access clipboard — but `st.code()` helps user copy easily
-        st.code(st.session_state.commit_message, language="text")
+    
 
-    with col3:
+    with col2:
         if st.button("🔄 Refresh Diff & Regenerate"):
-            st.session_state.commit_message = ""
-            st.session_state.diff = ""
-            st.rerun()
+            if not st.session_state.repo_path:
+                st.error("❌ Please enter your repository path first.")
+            elif not st.session_state.api_key:
+                st.error("❌ Please enter your Groq API key.")
+            else:
+                with st.spinner("🔁 Refreshing and regenerating..."):
+                    diff, error = get_git_diff(st.session_state.repo_path)
+                    if error:
+                        st.error(f"❌ {error}")
+                    elif not diff:
+                        st.warning("✅ No changes detected in this repository.")
+                    else:
+                        st.session_state.diff = diff
+                        try:
+                            commit_message = generate_commit_message(diff, st.session_state.api_key)
+                            st.session_state.commit_message = commit_message
+                            st.success("✅ Commit message regenerated!")
+                        except Exception as e:
+                            st.error(f"❌ Failed to regenerate: {e}")
+
+
+
+
 
 
 # --- FOOTER ---
