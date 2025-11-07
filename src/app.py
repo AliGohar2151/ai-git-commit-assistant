@@ -11,12 +11,14 @@ MAX_TOKENS = 300
 
 # --- APP SETUP ---
 st.set_page_config(
-    page_title="AI Git Commit Assistant", page_icon="🤖", layout="centered"
+    page_title="AI Git Commit Assistant",
+    page_icon="🤖",
+    layout="centered",
 )
 
 st.title("🤖 AI Git Commit Message Generator")
 st.write(
-    "Automatically generate clear, conventional commit messages using **Groq LLaMA 3.3**."
+    "Automatically generate **clear, conventional Git commit messages** using **Groq LLaMA 3.3**."
 )
 
 # --- SESSION STATE ---
@@ -26,7 +28,6 @@ if "commit_message" not in st.session_state:
 if "diff" not in st.session_state:
     st.session_state.diff = ""
 
-# Start with an empty repo path — user must enter it
 if "repo_path" not in st.session_state:
     st.session_state.repo_path = ""
 
@@ -37,24 +38,20 @@ if "api_key" not in st.session_state:
 # --- INPUT ---
 with st.expander("⚙️ Configuration", expanded=True):
     st.session_state.repo_path = st.text_input(
-    "📁 Repository Path",
-    value=st.session_state.repo_path,
-    placeholder="Enter your local Git repository path...",
-    help="Enter the full path to your local Git repository.",
-)
-
+        "📁 Repository Path",
+        value=st.session_state.repo_path,
+        placeholder="Enter your local Git repository path...",
+        help="Enter the full path to your local Git repository.",
+    )
 
     st.session_state.api_key = st.text_input(
         "🔑 Groq API Key",
         type="password",
         value=st.session_state.api_key,
-        help="Get your key from https://console.groq.com/keys",
+        help="Get your API key from https://console.groq.com/keys",
     )
 
-
-generate_btn = st.button(
-    "🔍 Detect Changes & Generate Commit Message", type="primary"
-)
+generate_btn = st.button("🔍 Detect Changes & Generate Commit Message", type="primary")
 
 
 # --- HELPER FUNCTIONS ---
@@ -65,31 +62,34 @@ def get_git_diff(repo_path: str) -> Tuple[str, str]:
 
     try:
         subprocess.check_output(
-            ["git", "rev-parse", "--is-inside-work-tree"], cwd=repo_path, stderr=subprocess.PIPE,
+            ["git", "rev-parse", "--is-inside-work-tree"],
+            cwd=repo_path,
+            stderr=subprocess.PIPE,
         )
     except subprocess.CalledProcessError:
-        return "", f"'{repo_path}' is not a Git repository."
+        return "", f"'{repo_path}' is not a valid Git repository."
 
     try:
-        # Force UTF-8 decoding to avoid UnicodeDecodeError
         diff = subprocess.check_output(
             ["git", "diff", "--cached"],
             cwd=repo_path,
             text=True,
             encoding="utf-8",
-            errors="replace",  # replaces invalid chars instead of crashing
-        )
-        if not diff.strip():
+            errors="replace",
+        ).strip()
+
+        if not diff:
             diff = subprocess.check_output(
                 ["git", "diff"],
                 cwd=repo_path,
                 text=True,
                 encoding="utf-8",
                 errors="replace",
-            )
-        return diff.strip(), ""
+            ).strip()
+
+        return diff, ""
     except subprocess.CalledProcessError as e:
-        return "", f"Failed to get git diff: {e.stderr}"
+        return "", f"Failed to get git diff: {e.stderr or str(e)}"
 
 
 def generate_commit_message(diff: str, api_key: str) -> str:
@@ -137,12 +137,9 @@ Git diff:
 
 
 def commit_changes(repo_path: str, message: str) -> Tuple[bool, str]:
-    """Stage and commit all changes safely. Returns (success, message)."""
+    """Stage and commit all changes safely."""
     try:
-        subprocess.run(
-            ["git", "add", "."], cwd=repo_path, check=True, capture_output=True
-        )
-        # Use --file=- to pass the multi-line message via stdin
+        subprocess.run(["git", "add", "."], cwd=repo_path, check=True, capture_output=True)
         subprocess.run(
             ["git", "commit", "--file=-"],
             input=message,
@@ -153,13 +150,15 @@ def commit_changes(repo_path: str, message: str) -> Tuple[bool, str]:
         )
         return True, "✅ Commit created successfully!"
     except subprocess.CalledProcessError as e:
-        return False, f"❌ Commit failed: {e.stderr.strip() or e}"
+        return False, f"❌ Commit failed: {e.stderr or str(e)}"
 
 
 # --- MAIN LOGIC ---
 if generate_btn:
     if not st.session_state.api_key:
-        st.error("❌ Please enter your Groq API Key in the configuration section.")
+        st.error("❌ Please enter your Groq API key.")
+    elif not st.session_state.repo_path:
+        st.error("❌ Please enter your repository path.")
     else:
         with st.spinner("🧠 Analyzing changes..."):
             diff, error = get_git_diff(st.session_state.repo_path)
@@ -167,22 +166,26 @@ if generate_btn:
                 st.error(f"❌ {error}")
             elif not diff:
                 st.warning("✅ No changes detected in this repository.")
-            else:  # Success
+            else:
                 st.session_state.diff = diff
-                commit_message = generate_commit_message(
-                    diff, st.session_state.api_key
-                )
-                st.session_state.commit_message = commit_message
-                st.success("✅ Commit message generated!")
+                try:
+                    commit_message = generate_commit_message(diff, st.session_state.api_key)
+                    st.session_state.commit_message = commit_message
+                    st.success("✅ Commit message generated!")
+                except Exception as e:
+                    st.error(f"❌ Failed to generate message: {e}")
 
 
 # --- DISPLAY GENERATED MESSAGE ---
 if st.session_state.commit_message:
     st.text_area(
-        "📝 Suggested Commit Message", st.session_state.commit_message, height=150
+        "📝 Suggested Commit Message",
+        st.session_state.commit_message,
+        height=160,
     )
 
     col1, col2, col3 = st.columns([1, 1, 2])
+
     with col1:
         if st.button("💾 Commit Changes"):
             success, msg = commit_changes(
@@ -197,13 +200,17 @@ if st.session_state.commit_message:
                 st.error(msg)
 
     with col2:
-        st.button("📋 Copy", help="Copy the commit message to the clipboard")
+        # Streamlit cannot directly access clipboard — but `st.code()` helps user copy easily
+        st.code(st.session_state.commit_message, language="text")
 
     with col3:
         if st.button("🔄 Refresh Diff & Regenerate"):
+            st.session_state.commit_message = ""
+            st.session_state.diff = ""
             st.rerun()
 
-# --- Footer ---
+
+# --- FOOTER ---
 st.markdown(
     """
     <hr style="margin-top: 2em; margin-bottom: 1em;">
