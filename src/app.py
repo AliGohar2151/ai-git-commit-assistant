@@ -1,6 +1,7 @@
 import os
 import subprocess
 import streamlit as st
+from typing import Tuple
 from groq import Groq
 
 # --- CONFIG ---
@@ -23,30 +24,48 @@ if "commit_message" not in st.session_state:
     st.session_state.commit_message = ""
 if "diff" not in st.session_state:
     st.session_state.diff = ""
+if "repo_path" not in st.session_state:
+    st.session_state.repo_path = os.getcwd()
+
 
 # --- INPUT ---
-repo_path = st.text_input(
-    "📁 Repository Path",
-    value="",  # Default to the current directory
-    help="Defaults to the current directory. Change if you want to analyze another local repository.",
+# repo_path = st.text_input(
+#     "📁 Repository Path",
+#     value="",  # Default to the current directory
+#     help="Defaults to the current directory. Change if you want to analyze another local repository.",
+# )
+# generate_btn = st.button("🔍 Detect Changes & Generate Commit Message")
+with st.expander("⚙️ Configuration", expanded=True):
+    st.session_state.repo_path = st.text_input(
+        "📁 Repository Path",
+        value=st.session_state.repo_path,
+        help="Enter the full path to your local Git repository.",
+    )
+
+    api_key = st.text_input(
+        "🔑 Groq API Key",
+        type="password",
+        help="Get your key from https://console.groq.com/keys",
+    )
+
+
+generate_btn = st.button(
+    "🔍 Detect Changes & Generate Commit Message", type="primary"
 )
-generate_btn = st.button("🔍 Detect Changes & Generate Commit Message")
 
 
 # --- HELPER FUNCTIONS ---
-def get_git_diff(repo_path: str) -> str:
-    """Fetch git diff (staged or unstaged)"""
+def get_git_diff(repo_path: str) -> Tuple[str, str]:
+    """Fetch git diff (staged or unstaged). Returns (diff, error_message)."""
     if not os.path.exists(repo_path):
-        st.error(f"❌ Path not found: {repo_path}")
-        return ""
+        return "", f"Path not found: {repo_path}"
 
     try:
         subprocess.check_output(
-            ["git", "rev-parse", "--is-inside-work-tree"], cwd=repo_path, text=True
+            ["git", "rev-parse", "--is-inside-work-tree"], cwd=repo_path, stderr=subprocess.PIPE,
         )
     except subprocess.CalledProcessError:
-        st.error(f"❌ '{repo_path}' is not a Git repository.")
-        return ""
+        return "", f"'{repo_path}' is not a Git repository."
 
     try:
         # Force UTF-8 decoding to avoid UnicodeDecodeError
@@ -65,10 +84,9 @@ def get_git_diff(repo_path: str) -> str:
                 encoding="utf-8",
                 errors="replace",
             )
-        return diff.strip()
-    except subprocess.CalledProcessError:
-        st.error("❌ Failed to get git diff.")
-        return ""
+        return diff.strip(), ""
+    except subprocess.CalledProcessError as e:
+        return "", f"Failed to get git diff: {e.stderr}"
 
 
 def generate_commit_message(diff: str, api_key: str) -> str:
@@ -104,8 +122,6 @@ chore: for build, dependency, or config updates
 
 Git diff:
 {diff}
-
-{diff}
 """
     completion = client.chat.completions.create(
         model=MODEL_NAME,
@@ -117,27 +133,28 @@ Git diff:
     return completion.choices[0].message.content.strip()
 
 
-def commit_changes(repo_path: str, message: str):
-    """Stage and commit all changes safely."""
+def commit_changes(repo_path: str, message: str) -> Tuple[bool, str]:
+    """Stage and commit all changes safely. Returns (success, message)."""
     try:
         subprocess.run(["git", "add", "."], cwd=repo_path, check=True)
         subprocess.run(["git", "commit", "-m", message], cwd=repo_path, check=True)
         return True, "✅ Commit created successfully!"
     except subprocess.CalledProcessError as e:
-        return False, f"❌ Commit failed: {e}"
+        return False, f"❌ Commit failed: {e.stderr or e}"
 
 
 # --- MAIN LOGIC ---
 if generate_btn:
-    api_key = os.getenv("MY_API_KEY")
     if not api_key:
-        st.error("❌ Environment variable `MY_API_KEY` not found.")
+        st.error("❌ Please enter your Groq API Key in the configuration section.")
     else:
         with st.spinner("🧠 Analyzing changes..."):
-            diff = get_git_diff(repo_path)
-            if not diff:
-                st.warning("No changes detected in this repository.")
-            else:
+            diff, error = get_git_diff(st.session_state.repo_path)
+            if error:
+                st.error(f"❌ {error}")
+            elif not diff:
+                st.warning("✅ No changes detected in this repository.")
+            else:  # Success
                 st.session_state.diff = diff
                 commit_message = generate_commit_message(diff, api_key)
                 st.session_state.commit_message = commit_message
@@ -153,7 +170,9 @@ if st.session_state.commit_message:
     col1, col2 = st.columns(2)
     with col1:
         if st.button("💾 Commit Changes"):
-            success, msg = commit_changes(repo_path, st.session_state.commit_message)
+            success, msg = commit_changes(
+                st.session_state.repo_path, st.session_state.commit_message
+            )
             if success:
                 st.success(msg)
             else:
@@ -161,11 +180,14 @@ if st.session_state.commit_message:
 
     with col2:
         if st.button("🔁 Refresh Diff"):
-            st.session_state.diff = get_git_diff(repo_path)
-            if st.session_state.diff:
+            st.session_state.diff, error = get_git_diff(st.session_state.repo_path)
+            if error:
+                st.error(f"❌ {error}")
+                st.session_state.diff = ""
+            elif st.session_state.diff:
                 st.info("🔄 Diff refreshed successfully.")
             else:
-                st.warning("No changes detected after refresh.")
+                st.warning("✅ No changes detected after refresh.")
 
 
 st.markdown(
