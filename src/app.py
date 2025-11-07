@@ -22,27 +22,27 @@ st.write(
 # --- SESSION STATE ---
 if "commit_message" not in st.session_state:
     st.session_state.commit_message = ""
+
 if "diff" not in st.session_state:
     st.session_state.diff = ""
+
+# Start with an empty repo path — user must enter it
 if "repo_path" not in st.session_state:
-    st.session_state.repo_path = os.getcwd()
+    st.session_state.repo_path = ""
+
 if "api_key" not in st.session_state:
     st.session_state.api_key = os.getenv("MY_API_KEY", "")
 
 
 # --- INPUT ---
-# repo_path = st.text_input(
-#     "📁 Repository Path",
-#     value="",  # Default to the current directory
-#     help="Defaults to the current directory. Change if you want to analyze another local repository.",
-# )
-# generate_btn = st.button("🔍 Detect Changes & Generate Commit Message")
 with st.expander("⚙️ Configuration", expanded=True):
     st.session_state.repo_path = st.text_input(
-        "📁 Repository Path",
-        value=st.session_state.repo_path,
-        help="Enter the full path to your local Git repository.",
-    )
+    "📁 Repository Path",
+    value=st.session_state.repo_path,
+    placeholder="Enter your local Git repository path...",
+    help="Enter the full path to your local Git repository.",
+)
+
 
     st.session_state.api_key = st.text_input(
         "🔑 Groq API Key",
@@ -182,7 +182,7 @@ if st.session_state.commit_message:
         "📝 Suggested Commit Message", st.session_state.commit_message, height=150
     )
 
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns([1, 1, 2])
     with col1:
         if st.button("💾 Commit Changes"):
             success, msg = commit_changes(
@@ -190,21 +190,20 @@ if st.session_state.commit_message:
             )
             if success:
                 st.success(msg)
+                st.session_state.commit_message = ""
+                st.session_state.diff = ""
+                st.rerun()
             else:
                 st.error(msg)
 
     with col2:
-        if st.button("🔁 Refresh Diff"):
-            st.session_state.diff, error = get_git_diff(st.session_state.repo_path)
-            if error:
-                st.error(f"❌ {error}")
-                st.session_state.diff = ""
-            elif st.session_state.diff:
-                st.info("🔄 Diff refreshed successfully.")
-            else:
-                st.warning("✅ No changes detected after refresh.")
+        st.button("📋 Copy", help="Copy the commit message to the clipboard")
 
+    with col3:
+        if st.button("🔄 Refresh Diff & Regenerate"):
+            st.rerun()
 
+# --- Footer ---
 st.markdown(
     """
     <hr style="margin-top: 2em; margin-bottom: 1em;">
