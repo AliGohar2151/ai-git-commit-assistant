@@ -120,7 +120,7 @@ Git diff:
 def commit_changes(repo_path: str, message: str):
     """Stage and commit all changes safely."""
     try:
-        subprocess.run(["git", "add", "-A"], cwd=repo_path, check=True)
+        subprocess.run(["git", "add", "."], cwd=repo_path, check=True)
         subprocess.run(["git", "commit", "-m", message], cwd=repo_path, check=True)
         return True, "✅ Commit created successfully!"
     except subprocess.CalledProcessError as e:
