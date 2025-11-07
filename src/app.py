@@ -186,18 +186,44 @@ if st.session_state.commit_message:
 
     col1, col2, = st.columns([1, 2])
 
+    # --- Commit confirmation state ---
+    if "confirm_commit" not in st.session_state:
+        st.session_state.confirm_commit = False
+
     with col1:
-        if st.button("💾 Commit Changes"):
-            success, msg = commit_changes(
-                st.session_state.repo_path, st.session_state.commit_message
-            )
-            if success:
-                st.success(msg)
-                st.session_state.commit_message = ""
-                st.session_state.diff = ""
-                st.rerun()
-            else:
-                st.error(msg)
+        if not st.session_state.confirm_commit:
+            if st.button("💾 Commit Changes"):
+                if not st.session_state.repo_path:
+                    st.error("❌ Please enter your repository path first.")
+                else:
+                    st.session_state.confirm_commit = True
+                    st.warning("⚠️ Click '✅ Confirm Commit' below to finalize.")
+        else:
+            if st.button("✅ Confirm Commit"):
+                with st.spinner("📝 Creating commit..."):
+                    success, msg = commit_changes(
+                        st.session_state.repo_path, st.session_state.commit_message
+                    )
+                    if success:
+                        st.success(msg)
+                        try:
+                            # Show commit hash and summary
+                            commit_output = subprocess.check_output(
+                                ["git", "log", "-1", "--pretty=format:%h %s"],
+                                cwd=st.session_state.repo_path,
+                                text=True,
+                            ).strip()
+                            st.info(f"✅ Latest commit: `{commit_output}`")
+                        except Exception:
+                            pass
+
+                        # Reset state
+                        st.session_state.commit_message = ""
+                        st.session_state.diff = ""
+                        st.session_state.confirm_commit = False
+                    else:
+                        st.error(msg)
+                        st.session_state.confirm_commit = False
 
     
 
