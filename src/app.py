@@ -256,9 +256,3 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-
-def hello():
-    print("Hello")
-    
-def goodbye():
-    print("Goodbye")
