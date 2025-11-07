@@ -26,6 +26,8 @@ if "diff" not in st.session_state:
     st.session_state.diff = ""
 if "repo_path" not in st.session_state:
     st.session_state.repo_path = os.getcwd()
+if "api_key" not in st.session_state:
+    st.session_state.api_key = os.getenv("MY_API_KEY", "")
 
 
 # --- INPUT ---
@@ -42,9 +44,10 @@ with st.expander("⚙️ Configuration", expanded=True):
         help="Enter the full path to your local Git repository.",
     )
 
-    api_key = st.text_input(
+    st.session_state.api_key = st.text_input(
         "🔑 Groq API Key",
         type="password",
+        value=st.session_state.api_key,
         help="Get your key from https://console.groq.com/keys",
     )
 
@@ -145,7 +148,7 @@ def commit_changes(repo_path: str, message: str) -> Tuple[bool, str]:
 
 # --- MAIN LOGIC ---
 if generate_btn:
-    if not api_key:
+    if not st.session_state.api_key:
         st.error("❌ Please enter your Groq API Key in the configuration section.")
     else:
         with st.spinner("🧠 Analyzing changes..."):
@@ -156,7 +159,9 @@ if generate_btn:
                 st.warning("✅ No changes detected in this repository.")
             else:  # Success
                 st.session_state.diff = diff
-                commit_message = generate_commit_message(diff, api_key)
+                commit_message = generate_commit_message(
+                    diff, st.session_state.api_key
+                )
                 st.session_state.commit_message = commit_message
                 st.success("✅ Commit message generated!")
 
