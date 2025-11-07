@@ -17,3 +17,15 @@ venv/
 # Logs and temporary files
 *.log
 *.tmp
+build/AI_Git_Commit_Assistant/AI_Git_Commit_Assistant.pkg
+build/AI_Git_Commit_Assistant/Analysis-00.toc
+build/AI_Git_Commit_Assistant/base_library.zip
+build/AI_Git_Commit_Assistant/EXE-00.toc
+build/AI_Git_Commit_Assistant/PKG-00.toc
+build/AI_Git_Commit_Assistant/PYZ-00.pyz
+build/AI_Git_Commit_Assistant/PYZ-00.toc
+build/AI_Git_Commit_Assistant/warn-AI_Git_Commit_Assistant.txt
+build/AI_Git_Commit_Assistant/xref-AI_Git_Commit_Assistant.html
+.gitignore
+dist/AI_Git_Commit_Assistant.exe
+AI_Git_Commit_Assistant.spec
