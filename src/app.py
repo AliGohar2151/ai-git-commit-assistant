@@ -184,22 +184,15 @@ if st.session_state.commit_message:
         height=160,
     )
 
-    col1, col2, = st.columns([1, 2])
-
-    # --- Commit confirmation state ---
-    if "confirm_commit" not in st.session_state:
-        st.session_state.confirm_commit = False
+    col1, col2 = st.columns([1, 2])
 
     with col1:
-        if not st.session_state.confirm_commit:
-            if st.button("💾 Commit Changes"):
-                if not st.session_state.repo_path:
-                    st.error("❌ Please enter your repository path first.")
-                else:
-                    st.session_state.confirm_commit = True
-                    st.warning("⚠️ Click '✅ Confirm Commit' below to finalize.")
-        else:
-            if st.button("✅ Confirm Commit"):
+        if st.button("💾 Commit Changes"):
+            if not st.session_state.repo_path:
+                st.error("❌ Please enter your repository path first.")
+            elif not st.session_state.commit_message.strip():
+                st.error("❌ No commit message found.")
+            else:
                 with st.spinner("📝 Creating commit..."):
                     success, msg = commit_changes(
                         st.session_state.repo_path, st.session_state.commit_message
@@ -207,7 +200,6 @@ if st.session_state.commit_message:
                     if success:
                         st.success(msg)
                         try:
-                            # Show commit hash and summary
                             commit_output = subprocess.check_output(
                                 ["git", "log", "-1", "--pretty=format:%h %s"],
                                 cwd=st.session_state.repo_path,
@@ -215,17 +207,13 @@ if st.session_state.commit_message:
                             ).strip()
                             st.info(f"✅ Latest commit: `{commit_output}`")
                         except Exception:
-                            pass
+                            st.info("✅ Commit completed successfully!")
 
-                        # Reset state
+                        # Reset after commit
                         st.session_state.commit_message = ""
                         st.session_state.diff = ""
-                        st.session_state.confirm_commit = False
                     else:
                         st.error(msg)
-                        st.session_state.confirm_commit = False
-
-    
 
     with col2:
         if st.button("🔄 Refresh Diff & Regenerate"):
