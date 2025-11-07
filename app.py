@@ -5,7 +5,7 @@ from groq import Groq
 
 # --- CONFIG ---
 MODEL_NAME = "llama-3.3-70b-versatile"
-TEMPERATURE = 0.3
+TEMPERATURE = 0.5
 MAX_TOKENS = 300
 
 # --- APP SETUP ---
@@ -49,11 +49,22 @@ def get_git_diff(repo_path: str) -> str:
         return ""
 
     try:
+        # Force UTF-8 decoding to avoid UnicodeDecodeError
         diff = subprocess.check_output(
-            ["git", "diff", "--cached"], cwd=repo_path, text=True
+            ["git", "diff", "--cached"],
+            cwd=repo_path,
+            text=True,
+            encoding="utf-8",
+            errors="replace",  # replaces invalid chars instead of crashing
         )
         if not diff.strip():
-            diff = subprocess.check_output(["git", "diff"], cwd=repo_path, text=True)
+            diff = subprocess.check_output(
+                ["git", "diff"],
+                cwd=repo_path,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+            )
         return diff.strip()
     except subprocess.CalledProcessError:
         st.error("❌ Failed to get git diff.")
@@ -109,7 +120,7 @@ Git diff:
 def commit_changes(repo_path: str, message: str):
     """Stage and commit all changes safely."""
     try:
-        subprocess.run(["git", "add", "."], cwd=repo_path, check=True)
+        subprocess.run(["git", "add", "-A"], cwd=repo_path, check=True)
         subprocess.run(["git", "commit", "-m", message], cwd=repo_path, check=True)
         return True, "✅ Commit created successfully!"
     except subprocess.CalledProcessError as e:
